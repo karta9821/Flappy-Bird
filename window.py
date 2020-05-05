@@ -68,6 +68,9 @@ def stop(bg_game_over):
 
 
 def collision_detection(bird, pipes_list, score, coins_list, bg_game_over):
+    if bird.rect.bottom > 512 or bird.rect.top < 0:
+        audio.play_die()
+        stop(bg_game_over)
     for pipe in pipes_list:
         if bird.check_collision(pipe.rect) or bird.check_collision(pipe.rect_rotated):
             audio.play_die()
@@ -92,6 +95,9 @@ def create_pipes_and_coins(point, pipes_list, coins_list):
     elif pipes_list[-1].rect.left + 152 < 400 and point >= 35:
         pipes_list.append(pipes.Pipe([400, 512]))
         coins_list.append(coins.Coin(pipes_list[-1].get_mid_position()))
+
+
+bg_start = Background('sprites/message.png', 'sprites/message.png', [0, 0], [0, 0])
 
 
 def main():
@@ -128,7 +134,3 @@ def main():
         point.draw(score, screen)
         pygame.display.update()
         clock.tick(60)
-
-
-bg_start = Background('sprites/message.png', 'sprites/message.png', [0, 0], [0, 0])
-
