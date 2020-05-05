@@ -4,6 +4,7 @@ import pipes
 import coins
 import points
 import music
+import medals
 
 pygame.init()
 
@@ -11,6 +12,9 @@ screen = pygame.display.set_mode((400, 624))
 pygame.display.set_caption('Flappy Bird')
 clock = pygame.time.Clock()
 audio = music.Music()
+
+with open("score", 'r') as file:
+    saved_score = file.readline()
 
 
 class Background(pygame.sprite.Sprite):
@@ -20,8 +24,8 @@ class Background(pygame.sprite.Sprite):
         self.image_base = pygame.image.load(image_base)
         self.rect_landscape = self.image_landscape.get_rect()
         self.rect_base = self.image_base.get_rect()
-        self.rect_landscape.left, self.rect_landscape.right = location_landscape
-        self.rect_base.left, self.rect_base.right = location_base
+        self.rect_landscape.left, self.rect_landscape.top = location_landscape
+        self.rect_base.left, self.rect_base.top = location_base
 
 
 def set_landscape(x_pos1, x_pos2, bg_day):
@@ -55,7 +59,22 @@ def draw_coins(coins_list):
         coin.move()
 
 
-def stop(bg_game_over):
+def stop(bg_game_over, bg_day, score):
+    clock.tick(60)
+    medal = medals.Medal([45, 840])
+    score_location = [285, 825]
+    if score > int(saved_score):
+        medal.medal_select(True)
+        score_o = points.Point(score_location)
+        score_s = points.Point(score_location)
+        sv_score = score
+        with open("score", 'w') as file:
+            file.write(str(score))
+    else:
+        medal.medal_select(False)
+        score_o = points.Point([0, 0])
+        score_s = points.Point([0, 0])
+        sv_score = int(saved_score)
     while True:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -63,18 +82,27 @@ def stop(bg_game_over):
             elif ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_SPACE:
                     main()
-        screen.blit(bg_game_over.image_base, (0, 112))
+        if bg_game_over.rect_base.top > 112:
+            bg_game_over.rect_base.top -= 8
+            medal.rect.top -= 8
+            score_location[1] -= 8
+            screen.blit(bg_day.image_landscape, [bg_day.rect_landscape.left,bg_day.rect_landscape.top])
+            screen.blit(bg_day.image_base, [bg_day.rect_base.left, bg_day.rect_base.top])
+        screen.blit(bg_game_over.image_base, [0, bg_game_over.rect_base.top])
+        screen.blit(medal.image, [medal.rect.left, medal.rect.top])
+        score_o.draw_score(score, score_location, screen)
+        score_s.draw_score(sv_score, [score_location[0], score_location[1]+70], screen)
         pygame.display.update()
 
 
-def collision_detection(bird, pipes_list, score, coins_list, bg_game_over):
+def collision_detection(bird, pipes_list, score, coins_list, bg_game_over, bg_day):
     if bird.rect.bottom > 512 or bird.rect.top < 0:
         audio.play_die()
-        stop(bg_game_over)
+        stop(bg_game_over, bg_day, score)
     for pipe in pipes_list:
         if bird.check_collision(pipe.rect) or bird.check_collision(pipe.rect_rotated):
             audio.play_die()
-            stop(bg_game_over)
+            stop(bg_game_over, bg_day, score)
     for coin in coins_list:
         if bird.check_collision(coin.rect):
             coin.__del__()
@@ -102,7 +130,7 @@ bg_start = Background('sprites/message.png', 'sprites/message.png', [0, 0], [0, 
 
 def main():
     bg_day = Background('sprites/background-day.png', 'sprites/base.png', [0, 0], [0, 512])
-    bg_game_over = Background('sprites/game_over.png', 'sprites/game_over.png', [0, 0], [0, 0])
+    bg_game_over = Background('sprites/game_over.png', 'sprites/game_over.png', [0, 655], [0, 655])
     bgx = 0
     bgx2 = bg_day.image_landscape.get_width()
     score = 0
@@ -113,7 +141,7 @@ def main():
     pipes_list.append(pipes.Pipe([400, 512]))
     coins_list.append(coins.Coin(pipes_list[-1].get_mid_position()))
     while True:
-        score = collision_detection(bird, pipes_list, score, coins_list, bg_game_over)
+        score = collision_detection(bird, pipes_list, score, coins_list, bg_game_over, bg_day)
         create_pipes_and_coins(score, pipes_list, coins_list)
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
